@@ -202,7 +202,9 @@ internal sealed class MatchFinder
         var candidate = _roots[key];
         _roots[key] = position;
 
-        var expired = position - _windowSize + XMemCompressor.WindowSearchMargin;
+        // Tail refresh revisits positions before the new chunk.
+        // Its search window can reach discarded bytes, so expire those candidates too.
+        var expired = Math.Max(position - _windowSize + XMemCompressor.WindowSearchMargin, _partitionBase - 1);
         if (candidate < 0 || candidate <= expired)
         {
             _leftChildren[position] = -1;
