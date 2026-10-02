@@ -1,0 +1,8 @@
+<RunSettings>
+  <RunConfiguration>
+    <EnvironmentVariables>
+      <XNB_COMPRESSED_ROOT></XNB_COMPRESSED_ROOT>
+      <XNB_DECOMPRESSED_ROOT></XNB_DECOMPRESSED_ROOT>
+    </EnvironmentVariables>
+  </RunConfiguration>
+</RunSettings>
