@@ -1,6 +1,8 @@
-﻿# XnbCompressor
+﻿# XnbCompress
 
-XnbCompressor is an implementation of the LZX compression algorithm
+[![NuGet](https://img.shields.io/nuget/v/XnbCompress.svg)](https://www.nuget.org/packages/XnbCompress)
+
+XnbCompress is an implementation of the LZX compression algorithm
 used for binary data in the XNA Framework Content Pipeline.
 
 The encoder is a managed C# reimplementation based on analysis of `xcompress.dll`.

@@ -4,6 +4,35 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <LangVersion>12.0</LangVersion>
     <Nullable>enable</Nullable>
+    <Version>1.0.0</Version>
   </PropertyGroup>
+
+  <PropertyGroup Label="NuGet">
+    <IsPackable>true</IsPackable>
+    <PackageId>XnbCompress</PackageId>
+    <Authors>zerocker</Authors>
+    <Description>Managed LZX compression and decompression for framed payloads used in XNB files.</Description>
+    <PackageTags>lzx;xnb;xna;compression;decompression</PackageTags>
+    <RepositoryUrl>https://github.com/zrckr/XnbCompress</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- Decoder-derived code retains its separate dual license. -->
+    <PackageLicenseExpression>MIT AND (LGPL-2.1-only OR MS-PL)</PackageLicenseExpression>
+
+    <!-- Publish portable symbols separately from the runtime package. -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <DebugType>portable</DebugType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Bundle documentation and both license notices with the managed library. -->
+    <None Include="../../README.md" Pack="true" PackagePath="/"/>
+    <None Include="../../licenses/*" Pack="true" PackagePath="licenses/"/>
+    <None Include="../../docs/*.md" Pack="true" PackagePath="docs/"/>
+  </ItemGroup>
 
 </Project>
