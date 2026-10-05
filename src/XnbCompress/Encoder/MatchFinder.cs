@@ -8,6 +8,7 @@ internal sealed class MatchFinder
     public bool CanCompact => AvailableLength - _partitionBase >= _windowSize + _partitionSize;
 
     private readonly int _windowSize;
+    private readonly int _childMask;
     private readonly int _partitionSize;
     private readonly byte[] _source;
     private readonly byte[] _memory;
@@ -20,11 +21,15 @@ internal sealed class MatchFinder
     public MatchFinder(XMemCompressor encoder, byte[] source)
     {
         _windowSize = encoder.WindowSize;
+        _childMask = _windowSize - 1;
         _partitionSize = encoder.PartitionSize;
         _source = source ?? throw new ArgumentNullException(nameof(source));
         AvailableLength = source.Length;
-        _leftChildren = new int[source.Length];
-        _rightChildren = new int[source.Length];
+        // Keep logical positions in links, but reuse child slots once their
+        // positions leave the window. Expiry is checked before following links.
+        var childCount = Math.Min(source.Length, _windowSize);
+        _leftChildren = new int[childCount];
+        _rightChildren = new int[childCount];
         _memory = new byte[_windowSize + _partitionSize + XMemCompressor.MatchLookaheadSize];
         Reset();
     }
@@ -98,23 +103,23 @@ internal sealed class MatchFinder
         if (position <= expired)
         {
             SetLink(link, -1);
-            _leftChildren[position] = -1;
-            _rightChildren[position] = -1;
+            _leftChildren[position & _childMask] = -1;
+            _rightChildren[position & _childMask] = -1;
             return;
         }
 
-        var left = _leftChildren[position];
+        var left = _leftChildren[position & _childMask];
         if (left <= expired)
         {
             left = -1;
-            _leftChildren[position] = -1;
+            _leftChildren[position & _childMask] = -1;
         }
 
-        var right = _rightChildren[position];
+        var right = _rightChildren[position & _childMask];
         if (right <= expired)
         {
             right = -1;
-            _rightChildren[position] = -1;
+            _rightChildren[position & _childMask] = -1;
         }
 
         // Merge the children by descending position to retain newer
@@ -136,7 +141,7 @@ internal sealed class MatchFinder
                 }
 
                 link = (left, LinkKind.Right);
-                left = _rightChildren[left];
+                left = _rightChildren[left & _childMask];
             }
             else
             {
@@ -153,7 +158,7 @@ internal sealed class MatchFinder
                 }
 
                 link = (right, LinkKind.Left);
-                right = _leftChildren[right];
+                right = _leftChildren[right & _childMask];
             }
         }
     }
@@ -167,11 +172,11 @@ internal sealed class MatchFinder
                 break;
 
             case LinkKind.Left:
-                _leftChildren[link.Owner] = position;
+                _leftChildren[link.Owner & _childMask] = position;
                 break;
 
             case LinkKind.Right:
-                _rightChildren[link.Owner] = position;
+                _rightChildren[link.Owner & _childMask] = position;
                 break;
         }
     }
@@ -181,11 +186,6 @@ internal sealed class MatchFinder
         if (position < 0 || position >= AvailableLength)
         {
             throw new ArgumentOutOfRangeException(nameof(position));
-        }
-
-        if (!quick)
-        {
-            Array.Clear(_matchDistances, 0, _matchDistances.Length);
         }
 
         var remaining = AvailableLength - position;
@@ -201,8 +201,8 @@ internal sealed class MatchFinder
         var expired = Math.Max(position - _windowSize + XMemCompressor.WindowSearchMargin, _partitionBase - 1);
         if (candidate < 0 || candidate <= expired)
         {
-            _leftChildren[position] = -1;
-            _rightChildren[position] = -1;
+            _leftChildren[position & _childMask] = -1;
+            _rightChildren[position & _childMask] = -1;
             return new MatchCandidates(0, _matchDistances);
         }
 
@@ -260,8 +260,8 @@ internal sealed class MatchFinder
 
                         if (matched >= XMemCompressor.LongMatchThreshold)
                         {
-                            SetLink(leftLink, _leftChildren[candidate]);
-                            SetLink(rightLink, _rightChildren[candidate]);
+                            SetLink(leftLink, _leftChildren[candidate & _childMask]);
+                            SetLink(rightLink, _rightChildren[candidate & _childMask]);
                             break;
                         }
                     }
@@ -271,7 +271,7 @@ internal sealed class MatchFinder
 
                 SetLink(rightLink, candidate);
                 rightLink = (candidate, LinkKind.Left);
-                candidate = _leftChildren[candidate];
+                candidate = _leftChildren[candidate & _childMask];
             }
             else
             {
@@ -288,8 +288,8 @@ internal sealed class MatchFinder
 
                         if (matched >= XMemCompressor.LongMatchThreshold)
                         {
-                            SetLink(leftLink, _leftChildren[candidate]);
-                            SetLink(rightLink, _rightChildren[candidate]);
+                            SetLink(leftLink, _leftChildren[candidate & _childMask]);
+                            SetLink(rightLink, _rightChildren[candidate & _childMask]);
                             break;
                         }
                     }
@@ -300,7 +300,7 @@ internal sealed class MatchFinder
 
                 SetLink(leftLink, candidate);
                 leftLink = (candidate, LinkKind.Right);
-                candidate = _rightChildren[candidate];
+                candidate = _rightChildren[candidate & _childMask];
             }
         }
 

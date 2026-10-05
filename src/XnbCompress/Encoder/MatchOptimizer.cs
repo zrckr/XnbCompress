@@ -34,9 +34,10 @@ internal sealed class MatchOptimizer
             throw new ArgumentOutOfRangeException(nameof(remainingLength));
         }
 
-        // Include the end position, which holds the final path node.
-        // Reuse the allocation for later searches within this compression call.
-        var requiredLength = checked(remainingLength + 1);
+        // A search stops at the frontier limit, but its final match can extend past it.
+        // Include that match and its endpoint, then reuse this bounded allocation
+        // for later searches in this compression call.
+        var requiredLength = Math.Min(remainingLength, XMemCompressor.ShortMatchSearchLimit + Constants.MaximumMatchLength) + 1;
         if (_nodes.Length < requiredLength)
         {
             _nodes = new ParseNode[requiredLength];
