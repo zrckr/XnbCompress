@@ -210,7 +210,12 @@ internal sealed class MatchFinder
         var leftCommon = Constants.MinimumMatchLength;
         var rightCommon = Constants.MinimumMatchLength;
         var common = Constants.MinimumMatchLength;
-        _matchDistances[Constants.MinimumMatchLength] = position - candidate + 2;
+
+        if (!quick)
+        {
+            // Quick insertion only updates the tree; its match results are discarded
+            _matchDistances[Constants.MinimumMatchLength] = position - candidate + 2;
+        }
 
         var leftLink = (Owner: position, Kind: LinkKind.Left);
         var rightLink = (Owner: position, Kind: LinkKind.Right);
@@ -246,7 +251,11 @@ internal sealed class MatchFinder
 
                     if (bestLength < matched)
                     {
-                        SetMatchDistances(bestLength + 1, matched, position - candidate + 2);
+                        if (!quick)
+                        {
+                            SetMatchDistances(bestLength + 1, matched, position - candidate + 2);
+                        }
+
                         bestLength = matched;
 
                         if (matched >= XMemCompressor.LongMatchThreshold)
@@ -270,7 +279,11 @@ internal sealed class MatchFinder
                 {
                     if (bestLength < matched)
                     {
-                        SetMatchDistances(bestLength + 1, matched, position - candidate + 2);
+                        if (!quick)
+                        {
+                            SetMatchDistances(bestLength + 1, matched, position - candidate + 2);
+                        }
+
                         bestLength = matched;
 
                         if (matched >= XMemCompressor.LongMatchThreshold)
