@@ -14,6 +14,7 @@ internal sealed class TokenCostModel
     private readonly ushort[] _mainFrequencies;
     private readonly ushort[] _lengthFrequencies = new ushort[Constants.SecondaryLengthCount];
     private int _countedTokens;
+    private Cache _cache;
 
     public TokenCostModel(XMemCompressor encoder)
     {
@@ -26,6 +27,7 @@ internal sealed class TokenCostModel
     public void Reset()
     {
         _countedTokens = 0;
+        _cache = new Cache();
 
         Array.Clear(_mainFrequencies, 0, _mainFrequencies.Length);
         Array.Clear(_lengthFrequencies, 0, _lengthFrequencies.Length);
@@ -125,12 +127,19 @@ internal sealed class TokenCostModel
             return _mainCosts[token.LiteralValue];
         }
 
-        var (slot, extraBits) = TokenUtils.GetPositionSlot(token.EncodedDistance);
-        var cost = (int)_mainCosts[TokenUtils.GetMainSymbol(token, slot)];
+        // Adjacent candidate lengths often share a distance. Its slot is
+        // independent of coding trees, so retain it across cost rebuilds.
+        if (token.EncodedDistance != _cache.Distance)
+        {
+            (_cache.Slot, _cache.ExtraBits) = TokenUtils.GetPositionSlot(token.EncodedDistance);
+            _cache.Distance = token.EncodedDistance;
+        }
+
+        var cost = (int)_mainCosts[TokenUtils.GetMainSymbol(token, _cache.Slot)];
 
         // Match cost includes its distance bits and, for longer matches,
         // a second Huffman symbol describing the remaining length.
-        cost += extraBits;
+        cost += _cache.ExtraBits;
         if (token.MatchLength >= Constants.SecondaryMinimumLength)
         {
             cost += _lengthCosts[token.MatchLength - Constants.SecondaryMinimumLength];
@@ -161,5 +170,12 @@ internal sealed class TokenCostModel
         {
             frequencies[soleSymbol == 0 ? 1 : 0] = 1;
         }
+    }
+
+    private struct Cache()
+    {
+        public int Distance = 0;
+        public int Slot = 0;
+        public int ExtraBits = 0;
     }
 }
