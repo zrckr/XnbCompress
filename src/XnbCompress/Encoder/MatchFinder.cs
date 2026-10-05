@@ -21,13 +21,17 @@ internal sealed class MatchFinder
     public MatchFinder(XMemCompressor encoder, byte[] source)
     {
         _windowSize = encoder.WindowSize;
-        _childMask = _windowSize - 1;
+        // Tail refresh revisits positions up to 50 bytes behind the newest
+        // insertion, so their search window can still need older child links.
+        // Use the next power of two above window + lookbehind for cheap masking.
+        var childCapacity = 2 * _windowSize;
+        _childMask = childCapacity - 1;
         _partitionSize = encoder.PartitionSize;
         _source = source ?? throw new ArgumentNullException(nameof(source));
         AvailableLength = source.Length;
-        // Keep logical positions in links, but reuse child slots once their
-        // positions leave the window. Expiry is checked before following links.
-        var childCount = Math.Min(source.Length, _windowSize);
+        // Keep logical positions in links and retain enough slots for both
+        // the search window and tail refresh. Expiry is checked before reads.
+        var childCount = Math.Min(source.Length, childCapacity);
         _leftChildren = new int[childCount];
         _rightChildren = new int[childCount];
         _memory = new byte[_windowSize + _partitionSize + XMemCompressor.MatchLookaheadSize];
