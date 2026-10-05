@@ -70,23 +70,29 @@ internal static class TokenUtils
             throw new ArgumentOutOfRangeException(nameof(encodedDistance));
         }
 
-        var firstDistance = 0;
-
-        // The first four distance slots contain one
-        // value each; widths double every two slots up to 17 extra bits.
-        for (var slot = 0; slot < Constants.MaximumPositionSlotCount; slot++)
+        if (encodedDistance < 4)
         {
-            var extraBits = slot < 4 ? 0 : Math.Min(slot / 2 - 1, Constants.MaximumDistanceExtraBits);
-            var width = 1 << extraBits;
-
-            if (encodedDistance < (firstDistance + width))
-            {
-                return (slot, extraBits);
-            }
-
-            firstDistance += width;
+            return (encodedDistance, 0);
         }
 
-        throw new ArgumentOutOfRangeException(nameof(encodedDistance));
+        // Once widths reach 17 bits, all remaining slots have that width
+        const int fixedWidthBase = 1 << (Constants.MaximumDistanceExtraBits + 1);
+        if (encodedDistance >= fixedWidthBase)
+        {
+            var slot = 2 * (Constants.MaximumDistanceExtraBits + 1) +
+                       ((encodedDistance - fixedWidthBase) >> Constants.MaximumDistanceExtraBits);
+
+            if (slot >= Constants.MaximumPositionSlotCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(encodedDistance));
+            }
+
+            return (slot, Constants.MaximumDistanceExtraBits);
+        }
+
+        // Its leading bit selects a slot pair; the next bit selects it's half
+        var highestBit = (int)Math.Log(encodedDistance, 2);
+        var extraBits = highestBit - 1;
+        return (2 * highestBit + ((encodedDistance >> extraBits) & 1), extraBits);
     }
 }
