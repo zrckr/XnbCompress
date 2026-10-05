@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 
 namespace XnbCompress.Encoder;
 
@@ -89,7 +88,7 @@ internal sealed class MatchFinder
 
     public void Remove(int position, int expired)
     {
-        var key = Read(position) | Read(position + 1) << 8;
+        var key = _memory[position - _partitionBase] | _memory[position + 1 - _partitionBase] << 8;
         if (_roots[key] != position)
         {
             return;
@@ -159,12 +158,6 @@ internal sealed class MatchFinder
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private byte Read(int position)
-    {
-        return _memory[position - _partitionBase];
-    }
-
     private void SetLink((int Owner, LinkKind Kind) link, int position)
     {
         switch (link.Kind)
@@ -196,9 +189,10 @@ internal sealed class MatchFinder
         }
 
         var remaining = AvailableLength - position;
+        var positionIndex = position - _partitionBase;
         // Two leading bytes choose the root. Insert this position while
         // walking the suffix tree to find longer matches.
-        var key = Read(position) | Read(position + 1) << 8;
+        var key = _memory[positionIndex] | _memory[positionIndex + 1] << 8;
         var candidate = _roots[key];
         _roots[key] = position;
 
@@ -221,15 +215,20 @@ internal sealed class MatchFinder
         var leftLink = (Owner: position, Kind: LinkKind.Left);
         var rightLink = (Owner: position, Kind: LinkKind.Right);
         var limit = quick ? XMemCompressor.LongMatchThreshold : Constants.MaximumMatchLength;
+        ReadOnlySpan<byte> positionBytes = _memory.AsSpan(positionIndex, limit);
 
         while (candidate >= 0 && candidate > expired)
         {
             var difference = 0;
             var matched = common;
+            // Tree positions stay logical; translate once per candidate
+            // rather than once per byte compared against padded storage.
+            var candidateIndex = candidate - _partitionBase;
+            ReadOnlySpan<byte> candidateBytes = _memory.AsSpan(candidateIndex, limit);
 
-            while (matched < limit)
+            while ((uint)matched < (uint)positionBytes.Length)
             {
-                difference = Read(candidate + matched) - Read(position + matched);
+                difference = candidateBytes[matched] - positionBytes[matched];
 
                 if (difference != 0)
                 {
@@ -321,7 +320,8 @@ internal sealed class MatchFinder
             }
 
             var length = 0;
-            while (length < bestLength && Read(position - distance + length) == Read(position + length))
+            var repeatIndex = positionIndex - distance;
+            while (length < bestLength && _memory[repeatIndex + length] == _memory[positionIndex + length])
             {
                 length++;
             }
