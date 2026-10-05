@@ -3,7 +3,7 @@ using Xunit.Abstractions;
 namespace XnbCompress.Test;
 
 // Exercise paired XNB assets through every conversion chain and the native oracle.
-public class XnbCompressorTests(ITestOutputHelper output)
+public class XnbCompressTests(ITestOutputHelper output)
 {
     public static IEnumerable<object[]> Assets => SampleAssets.GetCases();
 

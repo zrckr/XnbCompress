@@ -13,7 +13,7 @@ internal sealed class XCompress : IDisposable
     private readonly DestroyContext _destroyCompression;
     private readonly DestroyContext _destroyDecompression;
 
-    private enum XnbCompressor
+    private enum XnbCompress
     {
         Lzx = 1
     }
@@ -27,7 +27,7 @@ internal sealed class XCompress : IDisposable
     }
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-    private delegate int CreateContext(XnbCompressor xnbCompressor, ref Parameters parameters, uint flags, out IntPtr context);
+    private delegate int CreateContext(XnbCompress xnbCompress, ref Parameters parameters, uint flags, out IntPtr context);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     private delegate int Transform(IntPtr context, [Out] byte[] destination, ref nuint destinationSize, byte[] source, nuint sourceSize);
@@ -92,7 +92,7 @@ internal sealed class XCompress : IDisposable
             WindowSize = 1U << XnbLogic.WindowExponent,
             PartitionSize = XnbLogic.PartitionSize
         };
-        var status = create(XnbCompressor.Lzx, ref parameters, 0, out var context);
+        var status = create(XnbCompress.Lzx, ref parameters, 0, out var context);
         if (status != 0)
         {
             throw new InvalidOperationException($"XMem context creation failed: 0x{status:X8}.");
