@@ -103,7 +103,9 @@ Missing counterparts are not reconstructed. Discovery fails if no compressed pai
 | **TOTAL**                             | **15597**                 |
 
 [^1]: The content is originally non-compressed, but was compressed via native library.
+
 [^2]: Targets MonoGame, but the content distributed via XNBs.
+
 [^3]: It has large assets to test against.
 
 ## Licensing
